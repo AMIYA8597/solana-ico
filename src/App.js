@@ -1,25 +1,34 @@
-import logo from './logo.svg';
+import React from 'react';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
+import Dashboard from './components/Dashboard';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import '@solana/wallet-adapter-react-ui/styles.css';
 import './App.css';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
 
-function App() {
+const App = () => {
+  const network = clusterApiUrl('devnet');
+  const wallets = [new PhantomWalletAdapter()];
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ConnectionProvider endpoint={network}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <div className="app-container">
+            <Header />
+            <Dashboard />
+            <Footer />
+          </div>
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   );
-}
+};
 
 export default App;
+

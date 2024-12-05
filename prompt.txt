@@ -1,0 +1,1129 @@
+this is my current smart contract
+
+
+
+
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, TokenAccount, Transfer};
+
+declare_id!("GPW34eu3rbyGriHnsGiPzpNdY28KuyHUqM7PTUFikTXT");
+
+#[program]
+pub mod simple_ico_program {
+    use super::*;
+
+    // Initialize the ICO
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        total_supply: u64,
+        token_price: u64,
+        start_time: i64,
+        duration: i64,
+    ) -> Result<()> {
+        let ico = &mut ctx.accounts.ico_account;
+
+        ico.authority = ctx.accounts.authority.key();
+        ico.total_supply = total_supply;
+        ico.token_price = token_price;
+        ico.start_time = start_time;
+        ico.duration = duration;
+        ico.tokens_sold = 0;
+        ico.is_active = true;
+
+        Ok(())
+    }
+
+    pub fn update_ico_details(
+        ctx: Context<UpdateIcoDetails>,
+        total_supply: u64,
+        token_price: u64,
+        start_time: i64,
+        duration: i64,
+    ) -> Result<()> {
+        let ico = &mut ctx.accounts.ico_account;
+
+        // Ensure only the authority can update details
+        require!(
+            ctx.accounts.authority.key() == ico.authority,
+            IcoError::Unauthorized
+        );
+
+        // Update details
+        ico.total_supply = total_supply;
+        ico.token_price = token_price;
+        ico.start_time = start_time;
+        ico.duration = duration;
+
+        Ok(())
+    }
+
+    // Buy tokens during the ICO
+    pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
+        let current_time = Clock::get()?.unix_timestamp;
+
+        // Extract authority info before mutable borrow
+        let authority_info = ctx.accounts.ico_account.to_account_info();
+
+        // Mutable borrow for `ico_account`
+        let ico = &mut ctx.accounts.ico_account;
+
+        // Check if ICO is active
+        require!(
+            ico.is_active
+                && current_time >= ico.start_time
+                && current_time < ico.start_time + ico.duration,
+            IcoError::IcoNotActive
+        );
+
+        // Check remaining supply
+        require!(
+            ico.tokens_sold + amount <= ico.total_supply,
+            IcoError::InsufficientTokens
+        );
+
+        // Calculate total cost
+        let total_cost = amount * ico.token_price;
+
+        msg!("Token Price: {}", ico.token_price);
+        msg!("Amount: {}", amount);
+        msg!("Total Cost: {}", total_cost);
+
+        // Transfer SOL from buyer to treasury
+        let transfer_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: ctx.accounts.buyer.to_account_info(),
+                to: ctx.accounts.treasury_wallet.to_account_info(),
+            },
+        );
+        anchor_lang::system_program::transfer(transfer_context, total_cost)?;
+
+        // Prepare signer seeds and extend lifetime
+        let signer_seeds: &[&[u8]] = &[b"ico".as_slice(), &[ctx.bumps.ico_account]];
+        let signer_seeds_arr = &[signer_seeds]; // Ensure it lives long enough
+
+        // Transfer tokens to buyer
+        let token_transfer_context = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.token_account.to_account_info(),
+                to: ctx.accounts.buyer_token_account.to_account_info(),
+                authority: ctx.accounts.authority.to_account_info(),
+            },
+            signer_seeds_arr,
+        );
+        token::transfer(token_transfer_context, amount)?;
+
+        // Update tokens sold
+        ico.tokens_sold += amount;
+
+        // Emit purchase event
+        emit!(TokenPurchaseEvent {
+            buyer: ctx.accounts.buyer.key(),
+            amount,
+            price: ico.token_price
+        });
+
+        Ok(())
+    }
+
+    // End the ICO
+    pub fn end_ico(ctx: Context<EndIco>) -> Result<()> {
+        let ico = &mut ctx.accounts.ico_account;
+        let current_time = Clock::get()?.unix_timestamp;
+
+        require!(
+            current_time >= ico.start_time + ico.duration,
+            IcoError::IcoStillActive
+        );
+
+        ico.is_active = false;
+
+        Ok(())
+    }
+}
+
+// Token Purchase Event
+#[event]
+pub struct TokenPurchaseEvent {
+    pub buyer: Pubkey,
+    pub amount: u64,
+    pub price: u64,
+}
+
+#[derive(Accounts)]
+pub struct UpdateIcoDetails<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"ico"],
+        bump
+    )]
+    pub ico_account: Account<'info, IcoAccount>,
+}
+
+// Account Structs
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        init, 
+        payer = authority, 
+        space = 8 + 32 + 8 * 6 + 1,
+        seeds = [b"ico"],
+        bump
+    )]
+    pub ico_account: Account<'info, IcoAccount>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct BuyTokens<'info> {
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"ico"],
+        bump,
+        // Add this constraint to explicitly set the token account's authority
+        has_one = authority 
+    )]
+    pub ico_account: Account<'info, IcoAccount>,
+    /// CHECK: This will be the authority for the token account
+    pub authority: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub treasury_wallet: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        token::authority = authority // Ensure the token account is owned by the PDA
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub buyer_token_account: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, token::Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct EndIco<'info> {
+    #[account(
+        mut,
+        seeds = [b"ico"],
+        bump
+    )]
+    pub ico_account: Account<'info, IcoAccount>,
+}
+
+// ICO Account Structure
+#[account]
+#[derive(Default)]
+pub struct IcoAccount {
+    pub authority: Pubkey,
+    pub total_supply: u64,
+    pub token_price: u64,
+    pub tokens_sold: u64,
+    pub start_time: i64,
+    pub duration: i64,
+    pub is_active: bool,
+}
+
+// Error Handling
+#[error_code]
+pub enum IcoError {
+    #[msg("ICO is not currently active")]
+    IcoNotActive,
+    #[msg("Insufficient tokens remaining")]
+    InsufficientTokens,
+    #[msg("ICO is still active")]
+    IcoStillActive,
+    #[msg("You are not authorized to perform this action")]
+    Unauthorized,
+}
+
+
+
+
+
+
+
+
+base on this smart contract i craete a ICO project where i create pages firstly, owner address create  the ICO supply and then render the page to the BUYtoken pages, this is my buyToken.js page under components foilder:   
+
+
+
+
+import React, { useState } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { getProgram } from '../utils/anchor-connection';
+import * as anchor from '@project-serum/anchor';
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const BuyTokens = ({ icoDetails, onPurchase }) => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleBuyTokens = async (e) => {
+    e.preventDefault();
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      setError('Please connect your wallet');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const program = getProgram(connection, wallet);
+      
+      // Get ICO PDA
+      const [icoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from("ico")],
+        program.programId
+      );
+
+      // Set up account addresses
+      const tokenMintAddress = new PublicKey('AhmbnmLBQWNy3zQMwi6g7s5tGFmbKZEfUczNkevZWFtX');
+      const treasuryWallet = new PublicKey('DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW');
+      
+      // Get ICO account data
+      const icoAccountInfo = await program.account.icoAccount.fetch(icoAccount);
+      const authority = icoAccountInfo.authority;
+
+      // Get token accounts
+      const tokenAccount = await getAssociatedTokenAddress(
+        tokenMintAddress,
+        authority,
+        true // allowOwnerOffCurve set to true for PDA
+      );
+
+      const buyerTokenAccount = await getAssociatedTokenAddress(
+        tokenMintAddress,
+        wallet.publicKey
+      );
+
+      // Check if buyer's token account exists
+      let buyerAccountInfo;
+      try {
+        buyerAccountInfo = await connection.getAccountInfo(buyerTokenAccount);
+      } catch (err) {
+        console.error('Error checking buyer token account:', err);
+      }
+
+      let transaction = new anchor.web3.Transaction();
+
+      // Create buyer's token account if it doesn't exist
+      if (!buyerAccountInfo) {
+        console.log('Creating buyer token account...');
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          wallet.publicKey, // payer
+          buyerTokenAccount, // ata
+          wallet.publicKey, // owner
+          tokenMintAddress, // mint
+        );
+        transaction.add(createAtaIx);
+      }
+
+      console.log('Setting up buy instruction with accounts:', {
+        buyer: wallet.publicKey.toBase58(),
+        icoAccount: icoAccount.toBase58(),
+        authority: authority.toBase58(),
+        treasuryWallet: treasuryWallet.toBase58(),
+        tokenAccount: tokenAccount.toBase58(),
+        buyerTokenAccount: buyerTokenAccount.toBase58(),
+      });
+
+      // Add buy tokens instruction
+      const buyInstruction = await program.methods
+        .buyTokens(new anchor.BN(amount))
+        .accounts({
+          buyer: wallet.publicKey,
+          icoAccount: icoAccount,
+          authority: authority,
+          treasuryWallet: treasuryWallet,
+          tokenAccount: tokenAccount,
+          buyerTokenAccount: buyerTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId
+        })
+        .instruction();
+
+      transaction.add(buyInstruction);
+
+      // Send and confirm transaction
+      const signature = await wallet.sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      console.log('Transaction successful:', signature);
+      setSuccess(`Transaction successful! Signature: ${signature}`);
+      onPurchase();
+    } catch (err) {
+      console.error('Detailed error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotalCost = () => {
+    if (!amount || !icoDetails?.tokenPrice) return 0;
+    return (amount * icoDetails.tokenPrice) / anchor.web3.LAMPORTS_PER_SOL;
+  };
+
+  if (!icoDetails || !icoDetails.isActive) {
+    return <div className="buy-tokens">ICO is not active</div>;
+  }
+
+  return (
+    <div className="buy-tokens">
+      <h2>Buy Tokens</h2>
+      {!wallet.connected ? (
+        <div className="connect-wallet-message">
+          Please connect your wallet to buy tokens
+        </div>
+      ) : (
+        <form onSubmit={handleBuyTokens}>
+          <div className="form-group">
+            <label htmlFor="amount">Amount of tokens:</label>
+            <input
+              type="number"
+              id="amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter number of tokens to buy"
+              min="1"
+              required
+            />
+            <small>Price per token: {icoDetails?.tokenPrice ? 
+              `${icoDetails.tokenPrice / anchor.web3.LAMPORTS_PER_SOL} SOL` : 
+              'Loading...'}</small>
+          </div>
+          <div className="total-cost">
+            Total Cost: {calculateTotalCost()} SOL
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading || !amount || amount <= 0}>
+            {loading ? 'Processing...' : 'Buy Tokens'}
+          </button>
+        </form>
+      )}
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+
+     
+    </div>
+  );
+};
+
+export default BuyTokens;
+
+
+
+
+
+
+
+
+in buyToken pages i tried to buy some tokens and facing this error when i try to give the input field value as of 100, that time phantom pop up incoming and then after popup show this error in UI "Error: Unexpected error", I already added token account in there still facing this issue, fix the issue and regenerate the full file again
+
+
+
+Now in this current js file, after clicking the buyToken Button phantom wallet is popup successfully and then when i click confirm the transaction, that time  facing this error :  "Error: Failed to setup token account",
+
+BTW my current owner wallet address is    "DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW"
+
+so solve the error, and regenerate the full file and if any changes needed tell me that also
+
+
+
+
+
+
+and base on the smart contract i create this files in my reactjs project
+
+
+
+
+
+
+
+
+
+
+src/component/BuyTokens.js
+
+
+import React, { useState, useEffect } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
+import { getProgram } from '../utils/anchor-connection';
+import * as anchor from '@project-serum/anchor';
+import { 
+  TOKEN_PROGRAM_ID, 
+  getAssociatedTokenAddress, 
+  createAssociatedTokenAccountInstruction, 
+  getAccount,
+  ASSOCIATED_TOKEN_PROGRAM_ID
+} from '@solana/spl-token';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const BuyTokens = ({ icoDetails, onPurchase }) => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [buyerTokenAccount, setBuyerTokenAccount] = useState(null);
+
+  const tokenMintAddress = new PublicKey('AhmbnmLBQWNy3zQMwi6g7s5tGFmbKZEfUczNkevZWFtX');
+  const treasuryWallet = new PublicKey('DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW');
+
+  useEffect(() => {
+    const setupBuyerTokenAccount = async () => {
+      if (wallet.publicKey) {
+        try {
+          const ata = await getAssociatedTokenAddress(
+            tokenMintAddress,
+            wallet.publicKey
+          );
+          setBuyerTokenAccount(ata);
+          console.log('Buyer token account set up:', ata.toBase58());
+        } catch (err) {
+          console.error('Error setting up buyer token account:', err);
+          setError('Failed to set up buyer token account: ' + err.message);
+        }
+      }
+    };
+
+    setupBuyerTokenAccount();
+  }, [wallet.publicKey]);
+
+  const handleBuyTokens = async (e) => {
+    e.preventDefault();
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      setError('Please connect your wallet');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      console.log('Starting token purchase process...');
+      const program = getProgram(connection, wallet);
+      
+      const [icoAccount] = await PublicKey.findProgramAddress(
+        [Buffer.from("ico")],
+        program.programId
+      );
+      console.log('ICO Account:', icoAccount.toBase58());
+
+      const icoAccountInfo = await program.account.icoAccount.fetch(icoAccount);
+      const authority = icoAccountInfo.authority;
+      console.log('ICO Authority:', authority.toBase58());
+
+      const tokenAccount = await getAssociatedTokenAddress(
+        tokenMintAddress,
+        authority,
+        true
+      );
+      console.log('Token Account:', tokenAccount.toBase58());
+
+      if (!buyerTokenAccount) {
+        throw new Error('Buyer token account not set up');
+      }
+      console.log('Buyer Token Account:', buyerTokenAccount.toBase58());
+
+      let transaction = new Transaction();
+
+      // Check if buyer's token account exists and create if it doesn't
+      try {
+        await getAccount(connection, buyerTokenAccount);
+        console.log('Buyer token account already exists');
+      } catch (err) {
+        console.log('Creating buyer token account...');
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          wallet.publicKey,
+          buyerTokenAccount,
+          wallet.publicKey,
+          tokenMintAddress
+        );
+        transaction.add(createAtaIx);
+      }
+
+      console.log('Creating buy instruction...');
+      const buyInstruction = await program.methods
+        .buyTokens(new anchor.BN(amount))
+        .accounts({
+          buyer: wallet.publicKey,
+          icoAccount: icoAccount,
+          authority: authority,
+          treasuryWallet: treasuryWallet,
+          tokenAccount: tokenAccount,
+          buyerTokenAccount: buyerTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId
+        })
+        .instruction();
+
+      transaction.add(buyInstruction);
+
+      console.log('Sending transaction...');
+      const signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [wallet.publicKey],
+        { commitment: 'confirmed' }
+      );
+
+      console.log('Transaction successful:', signature);
+      setSuccess(`Transaction successful! Signature: ${signature}`);
+      onPurchase();
+    } catch (err) {
+      console.error('Detailed error:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotalCost = () => {
+    if (!amount || !icoDetails?.tokenPrice) return 0;
+    return (Number(amount) * icoDetails.tokenPrice) / anchor.web3.LAMPORTS_PER_SOL;
+  };
+
+  if (!icoDetails || !icoDetails.isActive) {
+    return <div className="buy-tokens">ICO is not active</div>;
+  }
+
+  return (
+    <div className="buy-tokens">
+      <h2>Buy Tokens</h2>
+      {!wallet.connected ? (
+        <div className="connect-wallet-message">
+          Please connect your wallet to buy tokens
+        </div>
+      ) : (
+        <form onSubmit={handleBuyTokens}>
+          <div className="form-group">
+            <label htmlFor="amount">Amount of tokens:</label>
+            <input
+              type="number"
+              id="amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter number of tokens to buy"
+              min="1"
+              required
+            />
+            <small>Price per token: {icoDetails?.tokenPrice ? 
+              `${icoDetails.tokenPrice / anchor.web3.LAMPORTS_PER_SOL} SOL` : 
+              'Loading...'}</small>
+          </div>
+          <div className="total-cost">
+            Total Cost: {calculateTotalCost()} SOL
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading || !amount || Number(amount) <= 0}>
+            {loading ? 'Processing...' : 'Buy Tokens'}
+          </button>
+        </form>
+      )}
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+    </div>
+  );
+};
+
+export default BuyTokens;
+
+
+
+
+src/component/Dashboard.js
+
+
+
+import React, { useState, useEffect } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { getProgram, findProgramAddress } from '../utils/anchor-connection';
+import IcoDetails from './IcoDetails';
+import BuyTokens from './BuyTokens';
+import TokenBalance from './TokenBalance';
+import InitializeIco from './InitializeIco';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import * as anchor from '@project-serum/anchor';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const Dashboard = () => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [icoDetails, setIcoDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchIcoDetails = async () => {
+    if (!wallet.publicKey) return;
+
+    try {
+      const program = getProgram(connection, wallet);
+      const { publicKey: icoAccount } = await findProgramAddress(
+        [anchor.utils.bytes.utf8.encode('ico')],
+        program.programId
+      );
+
+      const account = await program.account.icoAccount.fetch(icoAccount);
+      setIcoDetails(account);
+    } catch (error) {
+      console.error('Error fetching ICO details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIcoDetails();
+  }, [connection, wallet]);
+
+  if (!wallet.connected) {
+    return (
+      <div className="dashboard">
+        <h2>Connect your wallet to view the ICO dashboard</h2>
+        <WalletMultiButton />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div className="dashboard">Loading ICO details...</div>;
+  }
+
+  return (
+    <div className="dashboard">
+      {icoDetails ? (
+        <>
+          <IcoDetails icoDetails={icoDetails} />
+          <TokenBalance />
+          <BuyTokens icoDetails={icoDetails} onPurchase={fetchIcoDetails} />
+        </>
+      ) : (
+        <InitializeIco onInitialize={fetchIcoDetails} />
+      )}
+    </div>
+  );
+};
+
+export default Dashboard;
+
+
+
+
+
+src/component/Footer.js
+
+import React from 'react';
+
+const Footer = () => {
+  return (
+    <footer className="app-footer">
+      <p>&copy; 2023 Solana ICO Dashboard. All rights reserved.</p>
+    </footer>
+  );
+};
+
+export default Footer;
+
+
+
+
+src/component/Header.js
+
+
+
+import React from 'react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+
+const Header = () => {
+  return (
+    <header className="app-header">
+      <h1>Solana ICO Dashboard</h1>
+      <WalletMultiButton />
+    </header>
+  );
+};
+
+export default Header;
+
+
+
+
+
+src/component/IcoDetails.js
+
+
+
+
+
+import React from 'react';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const IcoDetails = ({ icoDetails }) => {
+  if (!icoDetails) return null;
+
+  return (
+    <div className="ico-details">
+      <h2>ICO Details</h2>
+      <div className="detail-grid">
+        <div className="detail-item">
+          <span className="detail-label">Total Supply:</span>
+          <span className="detail-value">{icoDetails.totalSupply.toString()}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Token Price:</span>
+          <span className="detail-value">{icoDetails.tokenPrice.toString()} lamports</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Tokens Sold:</span>
+          <span className="detail-value">{icoDetails.tokensSold.toString()}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Start Time:</span>
+          <span className="detail-value">{new Date(icoDetails.startTime.toNumber() * 1000).toLocaleString()}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Duration:</span>
+          <span className="detail-value">{icoDetails.duration.toString()} seconds</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Status:</span>
+          <span className={`detail-value status ${icoDetails.isActive ? 'active' : 'inactive'}`}>
+            {icoDetails.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default IcoDetails;
+
+
+
+
+
+
+src/component/InitializeIco.js
+
+import React, { useState } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { getProgram, findProgramAddress } from '../utils/anchor-connection';
+import * as anchor from '@project-serum/anchor';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const InitializeIco = ({ onInitialize }) => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [totalSupply, setTotalSupply] = useState('');
+  const [tokenPrice, setTokenPrice] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [duration, setDuration] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleInitialize = async (e) => {
+    e.preventDefault();
+    if (!wallet.publicKey || !wallet.signTransaction) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const program = getProgram(connection, wallet);
+      const { publicKey: icoAccount } = await findProgramAddress(
+        [anchor.utils.bytes.utf8.encode('ico')],
+        program.programId
+      );
+
+      const tx = await program.methods
+        .initialize(
+          new anchor.BN(totalSupply),
+          new anchor.BN(tokenPrice),
+          new anchor.BN(Math.floor(new Date(startTime).getTime() / 1000)),
+          new anchor.BN(parseInt(duration) * 24 * 60 * 60) // Convert days to seconds
+        )
+        .accounts({
+          authority: wallet.publicKey,
+          icoAccount,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      setSuccess(`ICO initialized successfully! TxID: ${tx}`);
+      onInitialize();
+    } catch (err) {
+      console.error('Error initializing ICO:', err);
+      setError(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="initialize-ico">
+      <h2>Initialize ICO</h2>
+      <form onSubmit={handleInitialize}>
+        <div className="form-group">
+          <label htmlFor="totalSupply">Total Supply:</label>
+          <input
+            type="text"
+            id="totalSupply"
+            value={totalSupply}
+            onChange={(e) => setTotalSupply(e.target.value)}
+            placeholder="Enter total number of tokens (e.g., 1000000)"
+            required
+          />
+          <small>Enter the total number of tokens for the ICO (integer value)</small>
+        </div>
+        <div className="form-group">
+          <label htmlFor="tokenPrice">Token Price (lamports):</label>
+          <input
+            type="text"
+            id="tokenPrice"
+            value={tokenPrice}
+            onChange={(e) => setTokenPrice(e.target.value)}
+            placeholder="Enter price in lamports (e.g., 1000000 for 1 SOL)"
+            required
+          />
+          <small>Enter the price per token in lamports (1 SOL = 1,000,000,000 lamports)</small>
+        </div>
+        <div className="form-group">
+          <label htmlFor="startTime">Start Time:</label>
+          <input
+            type="datetime-local"
+            id="startTime"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            required
+          />
+          <small>Select the start date and time for the ICO</small>
+        </div>
+        <div className="form-group">
+          <label htmlFor="duration">Duration (days):</label>
+          <input
+            type="number"
+            id="duration"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            min="1"
+            placeholder="Enter duration in days (e.g., 30)"
+            required
+          />
+          <small>Enter the duration of the ICO in days (integer value)</small>
+        </div>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Initializing...' : 'Initialize ICO'}
+        </button>
+      </form>
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+    </div>
+  );
+};
+
+export default InitializeIco;
+
+
+
+
+src/component/TokenBalance.js
+
+
+
+import React, { useState, useEffect } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const TokenBalance = () => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [balance, setBalance] = useState(null);
+
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      if (!wallet.publicKey) return;
+
+      try {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        });
+
+        // Assuming the ICO token is the first token account
+        if (tokenAccounts.value.length > 0) {
+          const tokenBalance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+          setBalance(tokenBalance);
+        }
+      } catch (error) {
+        console.error('Error fetching token balance:', error);
+      }
+    };
+
+    fetchTokenBalance();
+  }, [connection, wallet]);
+
+  if (balance === null) return null;
+
+  return (
+    <div className="token-balance">
+      <h2>Your Token Balance</h2>
+      <p>{balance} ICO Tokens</p>
+    </div>
+  );
+};
+
+export default TokenBalance;
+
+
+
+
+
+
+
+src/utils/anchor-connection.js
+
+
+
+
+
+import { Connection, PublicKey } from '@solana/web3.js';
+import { Program, AnchorProvider } from '@project-serum/anchor';
+import idl from './ico-idl.json';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const programID = new PublicKey('GPW34eu3rbyGriHnsGiPzpNdY28KuyHUqM7PTUFikTXT');
+
+export const getProgram = (connection, wallet) => {
+  const provider = new AnchorProvider(connection, wallet, AnchorProvider.defaultOptions());
+  return new Program(idl, programID, provider);
+};
+
+export const findProgramAddress = async (seeds, programId) => {
+  const [publicKey, bump] = await PublicKey.findProgramAddress(seeds, programId);
+  return { publicKey, bump };
+};
+
+
+
+
+
+
+
+src/utils/formatters.js
+
+
+
+
+
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+export const formatLargeNumber = (number) => {
+    if (typeof number === 'object' && number.toString) {
+      return number.toString();
+    }
+    return number;
+  };
+  
+  
+
+
+
+
+
+
+src/App.js
+
+
+
+
+
+
+
+
+
+
+import React from 'react';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
+import Dashboard from './components/Dashboard';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import '@solana/wallet-adapter-react-ui/styles.css';
+import './App.css';
+import { Buffer } from "buffer";
+window.Buffer = window.Buffer || Buffer;
+
+const App = () => {
+  const network = clusterApiUrl('devnet');
+  const wallets = [new PhantomWalletAdapter()];
+
+  return (
+    <ConnectionProvider endpoint={network}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <div className="app-container">
+            <Header />
+            <Dashboard />
+            <Footer />
+          </div>
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
+};
+
+export default App;
+
+
+
+
+
+
+
+So this are my all major files and I also provide smart contract also, now read the smart contract and all react js file carefully and then solve the BuyTokenPage error and if needed changes the others files also
+
+and regenerate the full files and tell me the smart contract changes process also if needed (like what is buyer field should be in buytoken, IcoAccount, authority, treasureWallet, tokenAccount, buyerTokenAccount,tokenProgram and systemProgram in the input field)
