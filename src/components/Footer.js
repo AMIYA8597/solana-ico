@@ -1,9 +1,14 @@
 import React from 'react';
 
+import { Buffer } from 'buffer';
+
+// @ts-ignore
+window.Buffer = Buffer;
+
 const Footer = () => {
   return (
-    <footer className="app-footer">
-      <p>&copy; 2023 Solana ICO Dashboard. All rights reserved.</p>
+    <footer className="footer">
+      <p>&copy; 2024 Solana ICO. All rights reserved.</p>
     </footer>
   );
 };

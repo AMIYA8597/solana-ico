@@ -1,11 +1,16 @@
-import { Buffer } from "buffer";
-window.Buffer = window.Buffer || Buffer;
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-export const formatLargeNumber = (number) => {
-    if (typeof number === 'object' && number.toString) {
-      return number.toString();
-    }
-    return number;
-  };
-  
-  
+import { Buffer } from 'buffer';
+
+// @ts-ignore
+window.Buffer = Buffer;
+
+
+export const formatUnixTimestamp = (timestamp) => {
+  return new Date(timestamp * 1000).toLocaleString();
+};
+
+export const formatLamports = (lamports) => {
+  return (lamports / LAMPORTS_PER_SOL).toFixed(9);
+};
+

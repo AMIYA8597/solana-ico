@@ -1,43 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Buffer } from "buffer";
-window.Buffer = window.Buffer || Buffer;
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  getAccount,
+} from '@solana/spl-token';
+import { formatLamports } from '../utils/formatters';
+
+import { Buffer } from 'buffer';
+
+// @ts-ignore
+window.Buffer = Buffer;
 
 const TokenBalance = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
   const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchTokenBalance = async () => {
       if (!wallet.publicKey) return;
-
       try {
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
-
-        // Assuming the ICO token is the first token account
-        if (tokenAccounts.value.length > 0) {
-          const tokenBalance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-          setBalance(tokenBalance);
-        }
-      } catch (error) {
-        console.error('Error fetching token balance:', error);
+        const mint = new PublicKey(process.env.REACT_APP_TOKEN_MINT_ADDRESS);
+        const tokenAccount = await getAssociatedTokenAddress(mint, wallet.publicKey);
+        const accountInfo = await getAccount(connection, tokenAccount);
+        setBalance(accountInfo.amount.toString());
+      } catch (err) {
+        console.error('Error fetching token balance:', err);
+        setError('Failed to fetch token balance');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchTokenBalance();
-  }, [connection, wallet]);
+  }, [connection, wallet.publicKey]);
 
-  if (balance === null) return null;
+  if (loading) return <div>Loading token balance...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="token-balance">
       <h2>Your Token Balance</h2>
-      <p>{balance} ICO Tokens</p>
+      {balance !== null ? (
+        <p>{formatLamports(balance)} tokens</p>
+      ) : (
+        <p>No balance available</p>
+      )}
     </div>
   );
 };

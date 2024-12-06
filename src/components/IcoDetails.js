@@ -1,41 +1,68 @@
-import React from 'react';
-import { Buffer } from "buffer";
-window.Buffer = window.Buffer || Buffer;
+import React, { useState, useEffect } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { getProgram } from '../utils/anchor-connection';
+import { formatUnixTimestamp, formatLamports } from '../utils/formatters';
 
-const IcoDetails = ({ icoDetails }) => {
-  if (!icoDetails) return null;
+import { Buffer } from 'buffer';
+
+// @ts-ignore
+window.Buffer = Buffer;
+
+const IcoDetails = () => {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [icoDetails, setIcoDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchIcoDetails = async () => {
+      if (!wallet.publicKey) return;
+      try {
+        const program = getProgram(connection, wallet);
+        const [icoAccount] = await PublicKey.findProgramAddress(
+          [Buffer.from("ico")],
+          program.programId
+        );
+        const icoData = await program.account.icoAccount.fetch(icoAccount);
+        setIcoDetails({
+          totalSupply: icoData.totalSupply.toString(),
+          tokenPrice: icoData.tokenPrice.toString(),
+          startTime: formatUnixTimestamp(icoData.startTime),
+          endTime: formatUnixTimestamp(icoData.startTime.add(icoData.duration)),
+          isActive: icoData.isActive,
+          roundType: Object.keys(icoData.roundType)[0],
+        });
+      } catch (err) {
+        console.error('Error fetching ICO details:', err);
+        setError('Failed to fetch ICO details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIcoDetails();
+  }, [connection, wallet.publicKey]);
+
+  if (loading) return <div>Loading ICO details...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="ico-details">
       <h2>ICO Details</h2>
-      <div className="detail-grid">
-        <div className="detail-item">
-          <span className="detail-label">Total Supply:</span>
-          <span className="detail-value">{icoDetails.totalSupply.toString()}</span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">Token Price:</span>
-          <span className="detail-value">{icoDetails.tokenPrice.toString()} lamports</span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">Tokens Sold:</span>
-          <span className="detail-value">{icoDetails.tokensSold.toString()}</span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">Start Time:</span>
-          <span className="detail-value">{new Date(icoDetails.startTime.toNumber() * 1000).toLocaleString()}</span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">Duration:</span>
-          <span className="detail-value">{icoDetails.duration.toString()} seconds</span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">Status:</span>
-          <span className={`detail-value status ${icoDetails.isActive ? 'active' : 'inactive'}`}>
-            {icoDetails.isActive ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-      </div>
+      {icoDetails ? (
+        <>
+          <p>Total Supply: {formatLamports(icoDetails.totalSupply)} tokens</p>
+          <p>Token Price: {formatLamports(icoDetails.tokenPrice)} SOL</p>
+          <p>Start Time: {icoDetails.startTime}</p>
+          <p>End Time: {icoDetails.endTime}</p>
+          <p>Status: {icoDetails.isActive ? 'Active' : 'Inactive'}</p>
+          <p>Round Type: {icoDetails.roundType}</p>
+        </>
+      ) : (
+        <p>No ICO details available</p>
+      )}
     </div>
   );
 };
