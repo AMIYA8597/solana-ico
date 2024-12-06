@@ -1,33 +1,31 @@
-import React, { useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
-import { getProgram } from '../utils/anchor-connection';
-import * as anchor from '@project-serum/anchor';
+import React, { useState } from "react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
+import { getProgram } from "../utils/anchor-connection";
+import * as anchor from "@project-serum/anchor";
 
-import { Buffer } from 'buffer';
-
-// @ts-ignore
+import { Buffer } from "buffer";
 window.Buffer = Buffer;
 
 const InitializeIco = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [totalSupply, setTotalSupply] = useState('');
-  const [tokenPrice, setTokenPrice] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [duration, setDuration] = useState('');
-  const [roundType, setRoundType] = useState('SeedRound');
+  const [totalSupply, setTotalSupply] = useState("");
+  const [tokenPrice, setTokenPrice] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [duration, setDuration] = useState("");
+  const [roundType, setRoundType] = useState("SeedRound");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleInitialize = async (e) => {
     e.preventDefault();
     if (!wallet.publicKey || !wallet.signTransaction) return;
 
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       const program = getProgram(connection, wallet);
@@ -56,7 +54,7 @@ const InitializeIco = () => {
 
       setSuccess(`ICO initialized successfully! TxID: ${tx}`);
     } catch (err) {
-      console.error('Error initializing ICO:', err);
+      console.error("Error initializing ICO:", err);
       setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
@@ -121,7 +119,7 @@ const InitializeIco = () => {
           </select>
         </div>
         <button type="submit" disabled={loading}>
-          {loading ? 'Initializing...' : 'Initialize ICO'}
+          {loading ? "Initializing..." : "Initialize ICO"}
         </button>
       </form>
       {error && <div className="error-message">{error}</div>}
@@ -131,4 +129,3 @@ const InitializeIco = () => {
 };
 
 export default InitializeIco;
-

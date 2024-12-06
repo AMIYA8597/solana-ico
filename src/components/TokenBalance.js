@@ -9,8 +9,6 @@ import {
 import { formatLamports } from '../utils/formatters';
 
 import { Buffer } from 'buffer';
-
-// @ts-ignore
 window.Buffer = Buffer;
 
 const TokenBalance = () => {

@@ -4,8 +4,6 @@ import BuyTokens from './BuyTokens';
 import TokenBalance from './TokenBalance';
 
 import { Buffer } from 'buffer';
-
-// @ts-ignore
 window.Buffer = Buffer;
 
 const Dashboard = () => {

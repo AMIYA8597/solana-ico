@@ -1,8 +1,6 @@
 import React from 'react';
 
 import { Buffer } from 'buffer';
-
-// @ts-ignore
 window.Buffer = Buffer;
 
 const Footer = () => {

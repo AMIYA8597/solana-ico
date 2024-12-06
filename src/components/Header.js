@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 import { Buffer } from 'buffer';
-
-// @ts-ignore
 window.Buffer = Buffer;
 
 const Header = () => {
