@@ -6,15 +6,12 @@ import {
   getAssociatedTokenAddress,
   getAccount,
 } from '@solana/spl-token';
-import { formatLamports } from '../utils/formatters';
+import { formatLamports } from '../utils/formatters.ts';
 
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
-const TokenBalance = () => {
+const TokenBalance: React.FC = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [balance, setBalance] = useState(null);
+  const [balance, setBalance] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -22,7 +19,7 @@ const TokenBalance = () => {
     const fetchTokenBalance = async () => {
       if (!wallet.publicKey) return;
       try {
-        const mint = new PublicKey(process.env.REACT_APP_TOKEN_MINT_ADDRESS);
+        const mint = new PublicKey(process.env.REACT_APP_TOKEN_MINT_ADDRESS!);
         const tokenAccount = await getAssociatedTokenAddress(mint, wallet.publicKey);
         const accountInfo = await getAccount(connection, tokenAccount);
         setBalance(accountInfo.amount.toString());
@@ -37,16 +34,16 @@ const TokenBalance = () => {
     fetchTokenBalance();
   }, [connection, wallet.publicKey]);
 
-  if (loading) return <div>Loading token balance...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <div className="token-balance">
-      <h2>Your Token Balance</h2>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-2xl font-semibold mb-4">Your Token Balance</h2>
       {balance !== null ? (
-        <p>{formatLamports(balance)} tokens</p>
+        <p className="text-3xl font-bold text-blue-600">{formatLamports(balance)} tokens</p>
       ) : (
-        <p>No balance available</p>
+        <p className="text-gray-600">No balance available</p>
       )}
     </div>
   );

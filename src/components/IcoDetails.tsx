@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { getProgram } from '../utils/anchor-connection';
-import { formatUnixTimestamp, formatLamports } from '../utils/formatters';
+import { getProgram } from '../utils/anchor-connection.ts';
+import { formatUnixTimestamp, formatLamports } from '../utils/formatters.ts';
 
-import { Buffer } from 'buffer';
-
-// @ts-ignore
-window.Buffer = Buffer;
-
-const IcoDetails = () => {
+const IcoDetails: React.FC = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [icoDetails, setIcoDetails] = useState(null);
+  const [icoDetails, setIcoDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -45,21 +40,21 @@ const IcoDetails = () => {
     fetchIcoDetails();
   }, [connection, wallet.publicKey]);
 
-  if (loading) return <div>Loading ICO details...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="animate-pulse bg-gray-200 h-48 rounded-lg"></div>;
+  if (error) return <div className="text-red-500">Error: {error}</div>;
 
   return (
-    <div className="ico-details">
-      <h2>ICO Details</h2>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-2xl font-semibold mb-4">ICO Details</h2>
       {icoDetails ? (
-        <>
-          <p>Total Supply: {formatLamports(icoDetails.totalSupply)} tokens</p>
-          <p>Token Price: {formatLamports(icoDetails.tokenPrice)} SOL</p>
-          <p>Start Time: {icoDetails.startTime}</p>
-          <p>End Time: {icoDetails.endTime}</p>
-          <p>Status: {icoDetails.isActive ? 'Active' : 'Inactive'}</p>
-          <p>Round Type: {icoDetails.roundType}</p>
-        </>
+        <div className="space-y-2">
+          <p><span className="font-medium">Total Supply:</span> {formatLamports(icoDetails.totalSupply)} tokens</p>
+          <p><span className="font-medium">Token Price:</span> {formatLamports(icoDetails.tokenPrice)} SOL</p>
+          <p><span className="font-medium">Start Time:</span> {icoDetails.startTime}</p>
+          <p><span className="font-medium">End Time:</span> {icoDetails.endTime}</p>
+          <p><span className="font-medium">Status:</span> {icoDetails.isActive ? 'Active' : 'Inactive'}</p>
+          <p><span className="font-medium">Round Type:</span> {icoDetails.roundType}</p>
+        </div>
       ) : (
         <p>No ICO details available</p>
       )}

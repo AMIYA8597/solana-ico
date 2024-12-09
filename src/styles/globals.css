@@ -1,0 +1,16 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.wallet-adapter-button {
+  background-color: #3b82f6 !important;
+}
+
+.wallet-adapter-button:hover {
+  background-color: #2563eb !important;
+}
+

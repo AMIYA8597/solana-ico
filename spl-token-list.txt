@@ -33,3 +33,52 @@ webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token accounts
 Token                                         Balance
 -----------------------------------------------------
 EYt84zgX6cAuh43Xz5gRn4Z1eaiW5GGkdR3sWRAd8fT1  1000000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BTW my current owner wallet address is    "DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW"
+
+so solve the error, and regenerate the full file and if any changes needed tell me that also
+
+and base on the smart contract i create this files in my reactjs project
+
+in buyToken pages i tried to buy some tokens and facing this error when i try to give the input field value as of 100, that time phantom pop up incoming and then after popup show this error in UI "Error: Unexpected error", I already added token account in there still facing this issue, fix the issue and regenerate the full file again
+
+Now in this current js file, after clicking the buyToken Button phantom wallet is popup successfully and then when i click confirm the transaction, that time  facing this error :  "Error: Failed to setup token account",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+So this are my all major files and I also provide smart contract, now read the smart contract and all react js file carefully and then solve the BuyTokenPage error and others files also if needed changes the others files also
+
+and regenerate the full files and tell me the smart contract changes process also if needed (like what is buyer field should be in buytoken, IcoAccount, authority, treasureWallet, tokenAccount, buyerTokenAccount,tokenProgram and systemProgram in the input field)
+
+
+after carefully read the smart contract modify the current reactJs files and regenerate the full files all without any missing (I also changes some functionality in my current smart contract and paste fully here, base on this smart contract create a full reactjs ICO project with standard UI and without errro and also tell me where should i add programID, contract Address, Token address, token Account and other things)
+
