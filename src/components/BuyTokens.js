@@ -64,8 +64,6 @@ const BuyTokens = () => {
           buyer: wallet.publicKey,
           icoAccount: icoAccount,
           purchaseAccount: purchaseAccount,
-          mint: mint,
-          buyerTokenAccount: buyerTokenAccount,
           treasuryWallet: TREASURY_WALLET,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -119,54 +117,4 @@ const BuyTokens = () => {
 };
 
 export default BuyTokens;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -4,11 +4,6 @@ import { PublicKey } from '@solana/web3.js';
 import { getProgram } from '../utils/anchor-connection';
 import { formatUnixTimestamp, formatLamports } from '../utils/formatters';
 
-import { Buffer } from 'buffer';
-
-// @ts-ignore
-window.Buffer = Buffer;
-
 const IcoDetails = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -33,6 +28,7 @@ const IcoDetails = () => {
           endTime: formatUnixTimestamp(icoData.startTime.add(icoData.duration)),
           isActive: icoData.isActive,
           roundType: Object.keys(icoData.roundType)[0],
+          tokensSold: icoData.tokensSold.toString(),
         });
       } catch (err) {
         console.error('Error fetching ICO details:', err);
@@ -59,6 +55,7 @@ const IcoDetails = () => {
           <p>End Time: {icoDetails.endTime}</p>
           <p>Status: {icoDetails.isActive ? 'Active' : 'Inactive'}</p>
           <p>Round Type: {icoDetails.roundType}</p>
+          <p>Tokens Sold: {formatLamports(icoDetails.tokensSold)}</p>
         </>
       ) : (
         <p>No ICO details available</p>

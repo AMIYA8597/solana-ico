@@ -2,9 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
 const Header = () => {
   return (
     <header className="header">

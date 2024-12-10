@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useConnection, useWallet } from'@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import {
   TOKEN_PROGRAM_ID,
@@ -7,9 +7,6 @@ import {
   getAccount,
 } from '@solana/spl-token';
 import { formatLamports } from '../utils/formatters';
-
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
 
 const TokenBalance = () => {
   const { connection } = useConnection();

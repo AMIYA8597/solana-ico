@@ -1,8 +1,5 @@
 import React from 'react';
 
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
 const Footer = () => {
   return (
     <footer className="footer">

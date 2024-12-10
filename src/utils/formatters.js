@@ -1,7 +1,6 @@
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 import { Buffer } from 'buffer';
-
 // @ts-ignore
 window.Buffer = Buffer;
 

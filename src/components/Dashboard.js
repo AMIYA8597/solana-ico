@@ -3,9 +3,6 @@ import IcoDetails from './IcoDetails';
 import BuyTokens from './BuyTokens';
 import TokenBalance from './TokenBalance';
 
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
 const Dashboard = () => {
   return (
     <div className="dashboard">
@@ -18,6 +15,8 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
 
 
 
