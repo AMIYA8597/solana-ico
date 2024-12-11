@@ -3,7 +3,6 @@ import { Program, AnchorProvider } from '@project-serum/anchor';
 import idl from './ico-idl.json';
 
 import { Buffer } from 'buffer';
-
 // @ts-ignore
 window.Buffer = Buffer;
 

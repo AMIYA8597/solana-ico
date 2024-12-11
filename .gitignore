@@ -1,23 +1,69 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.env
+.env.*.local
+
+# Logs
+logs
+*.log
+logs/**/*.log
+debug.log
+error.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build and dependency directories
+dist/
+build/
+.cache/
+.eslintcache
+
+# React-specific files
+*.lock
+public/*.hot-update.js
+public/*.hot-update.json
+coverage/
+*.tsbuildinfo
+src/*.js.map
+src/*.ts.map
+
+# Testing
+/coverage
+/.nyc_output
+/.cypress_cache
+cypress/screenshots/
+cypress/videos/
+
+# Solana-related
+target/
+*.keypair.json
+*.so
+*.out
+*.il
+*.dll
+*.dylib
+*.exe
+
+# Miscellaneous
+*.iml
+*.class
+*.pyc
+*.pyo
+*.min.js
+*.min.css

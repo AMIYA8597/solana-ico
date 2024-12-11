@@ -4,7 +4,6 @@ import { PublicKey, Transaction } from '@solana/web3.js';
 import { getProgram } from '../utils/anchor-connection';
 import * as anchor from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
-import { formatLamports } from '../utils/formatters';
 
 const TREASURY_WALLET = new PublicKey('DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW');
 
