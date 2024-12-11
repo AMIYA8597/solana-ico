@@ -1,2 +1,40 @@
+REACT_APP_PROGRAM_ID=DabJsu1DrTeAauVMt1duWBG7BnkHi3ELd4ScrcjVohpz
+REACT_APP_NETWORK=https://api.devnet.solana.com
+REACT_APP_TREASURY_WALLET=YOUR_TREASURY_WALLET_ADDRESS
+REACT_APP_TOKEN_MINT=YOUR_TOKEN_MINT_ADDRESS
+REACT_APP_TOKEN_ACCOUNT=YOUR_TOKEN_ACCOUNT_ADDRESS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 REACT_APP_PROGRAM_ID=GaSbxDowTJusmjR2gANi5k795NMaVPVXGS3hkYu7TZG9
 REACT_APP_TOKEN_MINT_ADDRESS=EYt84zgX6cAuh43Xz5gRn4Z1eaiW5GGkdR3sWRAd8fT1   
+
+
+
+
+
+this is the full smart contract that I provided you, and it is an ICO smart contract that uses solana blockchain, now create a full react-js project and all the functionality based on the current smart contract and also create a standard structure, like useing components, pages, utils, .env and the others things what you needed
+
+So based on my input file create a standard react-js ICO project using the full smart contract and add standard UI like add with proper good-looking UI also
+
+BTW I have already deployed the contract in Solpg (a browser IDE) and I have the ico.json file and the current smart contract program ID, and that in mind create a full project with the proper files structure, no need to create the co.json file just tell me the path,
+
+create fully robust project without missing anything and create it .js format instead of .tsx format,
+
+create full project according to current smart contract functionality and add all functionality and from that project anyone can buy the ICO token what I deploy,
+
+so in that's mind create a fully robust reactjs ICO project fully
