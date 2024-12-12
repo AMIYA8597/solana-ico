@@ -1,3 +1,12 @@
+webskitters@webskitters-H610M-H-V2:~$ solana program close 3Tq78Z2FVznyNY2UVPYH5FHkEWYY7P9PAvbohG99DPV --bypass-warning
+
+
+
+
+
+
+
+
 webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token accounts --owner DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW --url https://api.devnet.solana.com
 Token                                         Balance
 -----------------------------------------------------
@@ -33,3 +42,62 @@ webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token accounts
 Token                                         Balance
 -----------------------------------------------------
 EYt84zgX6cAuh43Xz5gRn4Z1eaiW5GGkdR3sWRAd8fT1  1000000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token accounts --owner FoScPhAv3DcAwdxNbo4U47cJRhihL3mUSQKfZu3f6SJM
+Token                                         Balance
+-----------------------------------------------------
+73Vd3spmsgAdPWR5fDxGazKk21QmRPnSvHBeG99pS4CS  0
+BrwJssqTxMgYcFgJWiwTSPRpwzPkfaKveDtkkL6Vr9qr  0
+ES2ZjJnXi9GArArwFWmrJC5LSA3MsCf4G4FHjGJNfEgr  0
+H3HH5xzfih5UkzXVzUQ55cKPnrPMpC2TmTcQMyjHv7Nn  0
+
+webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token create-token
+Creating token 7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U under program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+
+Address:  7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U
+Decimals:  9
+
+Signature: h6yaG9MvEyzBNkNExdy48ZuMKLRWBH5zgMbrLF5QM2q1FkgpzngzAxeMZGRTrnYRZ8xwSW2NttCKo9RyUjY8LBB
+
+webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token create-account 7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U
+Creating account 3i4U9ZYBJkP8knkL9qPCP95xnQ3BsqPYYDQjZtWWL2A5
+
+Signature: 4Y1xM6T8jwVB6Dv9be4cq9DXoA9Kh4NcWJtKtzYAk5R7czkdRbcjAeYU22pgTpHwsv2L1qZ4ubiuP5qkNPr45j45
+
+
+webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token mint 7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U 1000000 3i4U9ZYBJkP8knkL9qPCP95xnQ3BsqPYYDQjZtWWL2A5
+Minting 1000000 tokens
+  Token: 7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U
+  Recipient: 3i4U9ZYBJkP8knkL9qPCP95xnQ3BsqPYYDQjZtWWL2A5
+
+Signature: 5MPD5pm5Kvcchu6Gq9RfkstSwv9ARazWqAptsz4yyMdJ9HERSw1xbLcXfNtBmkHTg3Uxr6DTxZDF8jVdrCcjEUBh
+
+webskitters@webskitters-H410M-S2-V2:~/Desktop/work/solana$ spl-token supply 7GYz5XMx5BQrMtexJZrrJQM1WfhHnWAmf8Snhaqqmf3U
+1000000

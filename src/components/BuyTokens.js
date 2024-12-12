@@ -5,7 +5,7 @@ import { getProgram } from '../utils/anchor-connection';
 import * as anchor from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 
-const TREASURY_WALLET = new PublicKey('DYkCAokwibanNxMvixmoZFQDwayGDJWfJ9moZjDRpUvW');
+const TREASURY_WALLET = new PublicKey('FoScPhAv3DcAwdxNbo4U47cJRhihL3mUSQKfZu3f6SJM');
 
 const BuyTokens = () => {
   const { connection } = useConnection();
